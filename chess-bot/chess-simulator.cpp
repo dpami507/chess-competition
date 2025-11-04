@@ -4,6 +4,7 @@
 #include "chess.hpp"
 #include <random>
 using namespace ChessSimulator;
+using namespace chess;
 
 // https://www.chessprogramming.org/Simplified_Evaluation_Function
 // We did some borrowing from this handy dandy website
@@ -67,96 +68,113 @@ const int PSQT_king[] = {
     20, 30, 10, 0, 0, 10, 30, 20
 };
 
-//Get the coords of a move from the position -> ex: "a6"
-std::pair<int, int> getCoords(const std::string& position)
+int getBoardScore(Board board)
 {
-    char lettersAsIndex[] = {'h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'};
-
-    for (size_t i = 0; i < 8; i++)
-    {
-        if (lettersAsIndex[i] == position[0])
-        {
-            int x = position[0] - 'a';
-            int y = position[1] - '1';
-
-            return { x, y };
-        }
-    }
-
-    std::cout << "FAILED TO CREATE PAIR\n";
-}
-
-int getScore(chess::Board board, chess::Move move)
-{
-    std::string moveCoord = move.to();
-    std::pair<int, int> coords = getCoords(moveCoord);
-
     int score = 0;
-    int pieceScore = 0;
 
-    chess::Square square((coords.second * 8) + coords.first);
-    chess::Piece piece = board.at(square);
+    //Go through all the squares
+    for (size_t sq = 0; sq < 64; sq++)
+    {
+        //Get the square and piece on that square
+        Square square = static_cast<Square>(sq);
+        Piece piece = board.at(square);
 
-    switch (piece.type()) {
-    case chess::PieceType(chess::PieceType::KING):
-        pieceScore += 20000;
-        pieceScore += PSQT_king[coords.second * 8 + coords.first];
-        break;
-    case chess::PieceType(chess::PieceType::QUEEN):
-        pieceScore += 900;
-        pieceScore += PSQT_queen[coords.second * 8 + coords.first];
-        break;
-    case chess::PieceType(chess::PieceType::ROOK):
-        pieceScore += 500;
-        pieceScore += PSQT_rook[coords.second * 8 + coords.first];
-        break;
-    case chess::PieceType(chess::PieceType::KNIGHT):
-        pieceScore += 320;
-        pieceScore += PSQT_knight[coords.second * 8 + coords.first];
-        break;
-    case chess::PieceType(chess::PieceType::BISHOP):
-        pieceScore += 330;
-        pieceScore += PSQT_bishop[coords.second * 8 + coords.first];
-        break;
-    case chess::PieceType(chess::PieceType::PAWN):
-        pieceScore += 100;
-        pieceScore += PSQT_pawn[coords.second * 8 + coords.first];
-        break;
-    default:
-        break;
+        //Get piece characteristics
+        if (piece == Piece::NONE) continue;
+        PieceType type = piece.type();
+        Color color = piece.color();
+
+        //Index for the PSQT_tables 
+        int index = (color == Color::WHITE) ? sq : (63 - sq);
+        int pieceScore = 0;
+
+        if (type == PieceType::underlying::KING)
+        {
+            pieceScore += 20000;
+            pieceScore += PSQT_king[index];
+        }
+        else if (type == PieceType::underlying::QUEEN)
+        {
+            pieceScore += 900;
+            pieceScore += PSQT_queen[index];
+        }
+        else if (type == PieceType::underlying::ROOK)
+        {
+            pieceScore += 500;
+            pieceScore += PSQT_rook[index];
+        }
+        else if (type == PieceType::underlying::BISHOP)
+        {
+            pieceScore += 330;
+            pieceScore += PSQT_bishop[index];
+        }
+        else if (type == PieceType::underlying::KNIGHT)
+        {
+            pieceScore += 320;
+            pieceScore += PSQT_knight[index];
+        }
+        else if (type == PieceType::underlying::PAWN)
+        {
+            pieceScore += 100;
+            pieceScore += PSQT_pawn[index];
+        }
+
+        std::cout << "Score is " << pieceScore << " for the piece " << piece << " at the location " << square << "\n";
+
+        score += (color == Color::WHITE) ? pieceScore : -pieceScore;
     }
-    if (piece.color() == chess::Color::BLACK)
-        score -= pieceScore;
-    else
-        score += pieceScore;
 
     return score;
 }
 
-std::pair<int, int> miniMax(int currentDepth, int index, bool getMax, int maxDepth, chess::Board board, chess::Movelist moves) {
+std::pair<int, int> miniMax(int currentDepth, int index, bool getMax, int maxDepth, chess::Board board) {
+
+    //List of all legal move that can be made
+    Movelist moves;
+    movegen::legalmoves(moves, board);
+
+    int bestScore = (getMax) ? -100000 : 100000;
+    int bestIndex = 0;
+
+    //Base Case
     if (currentDepth == maxDepth || moves.empty()) 
     { 
         //Get the score of where we are 
-        int score = getScore(board, chess::Move()); 
+        int score = getBoardScore(board); 
         
         // Return the pair of score and index 
         return { score, index }; 
     } 
+
     //For every move 
-    for (auto move : moves) 
+    for (chess::Move move : moves) 
     { 
-        //Make the move 
-        chess::Board tempBoard = board;
+        //Make the move on a new board
+        Board tempBoard = board;
         tempBoard.makeMove(move); 
-        chess::Movelist newMoves; 
-        chess::movegen::legalmoves(newMoves, tempBoard); 
-        if (getMax) 
-            return std::max(miniMax(currentDepth + 1, index * 2, false, maxDepth, tempBoard, newMoves),
-                            miniMax(currentDepth + 1, index * 2 + 1, false, maxDepth, tempBoard, newMoves)); 
+
+        std::pair<int, int> mM = miniMax(currentDepth + 1, index * 2, !getMax, maxDepth, tempBoard);
+
+        if (getMax)
+        {
+            if (mM.first > bestScore)
+            {
+                bestScore = mM.first;
+                bestIndex = mM.second;
+            }
+        }
         else 
-            return std::min(miniMax(currentDepth + 1, index * 2, true, maxDepth, tempBoard, newMoves), 
-                        miniMax(currentDepth + 1, index * 2 + 1, true, maxDepth, tempBoard, newMoves)); 
+        {
+            if (mM.first < bestScore)
+            {
+                bestScore = mM.first;
+                bestIndex = mM.second;
+            }
+        }
     } 
+
+    std::cout << "Using best score of " << bestScore << "\n";
+    return { bestScore, bestIndex };
 }
 
 std::string ChessSimulator::Move(std::string fen) {
@@ -168,14 +186,16 @@ std::string ChessSimulator::Move(std::string fen) {
   // using the one provided by the library
 
   // here goes a random movement
-  chess::Board board(fen);
-  chess::Movelist moves;
-  chess::movegen::legalmoves(moves, board);
+  Board board(fen);
+  Movelist moves;
+  movegen::legalmoves(moves, board);
 
   if(moves.size() == 0)
     return "";
 
-  std::pair<int, int> mM = miniMax(0, 0, true, 4, board, moves);
+  //WARNING IF YOU SET DEPTH TO 4 OR GREATER YOU COMPUTER WILL PROBABLY DIE
+  //Wow its great and it works but BY GOD IS IT SLOW welp we gotta implement alpha-beta pruning
+  std::pair<int, int> mM = miniMax(0, 0, true, 2, board);
   std::cout << "Minimax Index: " << mM.second << std::endl;
   std::cout << "Minimax Score: " << mM.first << std::endl;
 
