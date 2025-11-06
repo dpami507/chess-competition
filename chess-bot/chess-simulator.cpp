@@ -26,7 +26,8 @@ const int PSQT_knight[] = {
     -30, 0, 15, 20, 20, 15, 0, -30,
     -30, 5, 10, 15, 15, 10, 5, -30,
     -40, -20, 0, 5, 5, 0, -20, -40,
-    -50, -40, -30, -30, -30, -30, -40, -50 };
+    -50, -40, -30, -30, -30, -30, -40, -50 
+};
 const int PSQT_bishop[] = {
     -20, -10, -10, -10, -10, -10, -10, -20,
     -10, 0, 0, 0, 0, 0, 0, -10,
@@ -86,6 +87,8 @@ int getBoardScore(Board board)
 
         //Index for the PSQT_tables 
         int index = (color == Color::WHITE) ? sq : (63 - sq);
+        //int index = sq;
+
         int pieceScore = 0;
 
         if (type == PieceType::underlying::KING)
@@ -121,7 +124,8 @@ int getBoardScore(Board board)
 
         //std::cout << "Score is " << pieceScore << " for the piece " << piece << " at the location " << square << "\n";
 
-        score += (color == Color::WHITE) ? pieceScore : -pieceScore;
+        //score += (color == Color::WHITE) ? pieceScore : -pieceScore;
+        score += pieceScore;
     }
 
     return score;
@@ -131,32 +135,18 @@ bool GameOver(const Board& board)
 {
     switch (board.isGameOver().first)
     {
-    case GameResultReason::CHECKMATE:
-        return true;
-        break;
-    case GameResultReason::FIFTY_MOVE_RULE:
-        return true;
-        break;
-    case GameResultReason::INSUFFICIENT_MATERIAL:
-        return true;
-        break;
-    case GameResultReason::STALEMATE:
-        return true;
-        break;
-    case GameResultReason::THREEFOLD_REPETITION:
-        return true;
-        break;
     case GameResultReason::NONE:
         return false;
         break;
     default:
-        return false;
+        return true;
         break;
     }
 }
 
-std::pair<int, chess::Move> newMiniMax(Board board, int depth, bool getMax)
+std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax)
 {
+    //Base Case
     if (depth == 0 || GameOver(board))
     {
         int score = getBoardScore(board);
@@ -180,10 +170,9 @@ std::pair<int, chess::Move> newMiniMax(Board board, int depth, bool getMax)
 
         for (auto move : moves)
         {
-            Board tempBoard = board;
-            tempBoard.makeMove(move);
-
-            std::pair<int, chess::Move> eval = newMiniMax(tempBoard, depth - 1, false);
+            board.makeMove(move);
+            std::pair<int, chess::Move> eval = newMiniMax(board, depth - 1, false);
+            board.unmakeMove(move);
 
             if (eval.first > maxEval)
             {
@@ -201,10 +190,10 @@ std::pair<int, chess::Move> newMiniMax(Board board, int depth, bool getMax)
 
         for (auto move : moves)
         {
-            Board tempBoard = board;
-            tempBoard.makeMove(move);
+            board.makeMove(move);
+            std::pair<int, chess::Move> eval = newMiniMax(board, depth - 1, true);
+            board.unmakeMove(move);
 
-            std::pair<int, chess::Move> eval = newMiniMax(tempBoard, depth - 1, true);
             if (eval.first < minEval)
             {
                 minEval = eval.first;
@@ -274,12 +263,13 @@ std::string ChessSimulator::Move(std::string fen) {
   // extra points if you create your own board/move representation instead of
   // using the one provided by the library
 
-  // here goes a random movement
+    //Better Heuristics and alpha-beta pruning (!! THERES A SEBASTIAN LEAUGE VIDEO !!)
 
   Board board(fen);
   Movelist moves;
-  movegen::legalmoves(moves, board);
 
+  //Check if there are any legal moves
+  movegen::legalmoves(moves, board);
   if(moves.size() == 0)
     return "";
 
@@ -290,8 +280,9 @@ std::string ChessSimulator::Move(std::string fen) {
   //std::cout << "Minimax Score: " << mM.first << std::endl;
 
   std::pair<int, chess::Move> newMM = newMiniMax(board, 3, true);
-  std::cout << "Best Score is: " << newMM.first << std::endl;
+  std::cout << "========================\n";
   std::cout << "Best Move is: " << chess::uci::moveToUci(newMM.second) << std::endl;
+  std::cout << "Best Score is: " << newMM.first << std::endl;
 
   // Check if the move is valid
   if (newMM.second == chess::Move::NO_MOVE) {
