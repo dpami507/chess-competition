@@ -119,12 +119,101 @@ int getBoardScore(Board board)
             pieceScore += PSQT_pawn[index];
         }
 
-        std::cout << "Score is " << pieceScore << " for the piece " << piece << " at the location " << square << "\n";
+        //std::cout << "Score is " << pieceScore << " for the piece " << piece << " at the location " << square << "\n";
 
         score += (color == Color::WHITE) ? pieceScore : -pieceScore;
     }
 
     return score;
+}
+
+bool GameOver(const Board& board)
+{
+    switch (board.isGameOver().first)
+    {
+    case GameResultReason::CHECKMATE:
+        return true;
+        break;
+    case GameResultReason::FIFTY_MOVE_RULE:
+        return true;
+        break;
+    case GameResultReason::INSUFFICIENT_MATERIAL:
+        return true;
+        break;
+    case GameResultReason::STALEMATE:
+        return true;
+        break;
+    case GameResultReason::THREEFOLD_REPETITION:
+        return true;
+        break;
+    case GameResultReason::NONE:
+        return false;
+        break;
+    default:
+        return false;
+        break;
+    }
+}
+
+std::pair<int, chess::Move> newMiniMax(Board board, int depth, bool getMax)
+{
+    if (depth == 0 || GameOver(board))
+    {
+        int score = getBoardScore(board);
+        return { score, chess::Move() };
+    }
+
+    //List of all legal move that can be made
+    Movelist moves;
+    movegen::legalmoves(moves, board);
+
+    if(moves.empty())
+    {
+        return { getBoardScore(board), chess::Move::NO_MOVE };
+    }
+
+    //If its whites turn
+    if (getMax)
+    {
+        int maxEval = -99999999;
+        chess::Move bestMove = moves[0];
+
+        for (auto move : moves)
+        {
+            Board tempBoard = board;
+            tempBoard.makeMove(move);
+
+            std::pair<int, chess::Move> eval = newMiniMax(tempBoard, depth - 1, false);
+
+            if (eval.first > maxEval)
+            {
+                maxEval = eval.first;
+                bestMove = move;
+            }
+        }
+
+        return { maxEval, bestMove };
+    }
+    else
+    {
+        int minEval = 99999999;
+        chess::Move bestMove = moves[0];
+
+        for (auto move : moves)
+        {
+            Board tempBoard = board;
+            tempBoard.makeMove(move);
+
+            std::pair<int, chess::Move> eval = newMiniMax(tempBoard, depth - 1, true);
+            if (eval.first < minEval)
+            {
+                minEval = eval.first;
+                bestMove = move;
+            }
+        }
+
+        return { minEval, bestMove };
+    }
 }
 
 std::pair<int, int> miniMax(int currentDepth, int index, bool getMax, int maxDepth, chess::Board board) {
@@ -186,6 +275,7 @@ std::string ChessSimulator::Move(std::string fen) {
   // using the one provided by the library
 
   // here goes a random movement
+
   Board board(fen);
   Movelist moves;
   movegen::legalmoves(moves, board);
@@ -195,15 +285,25 @@ std::string ChessSimulator::Move(std::string fen) {
 
   //WARNING IF YOU SET DEPTH TO 4 OR GREATER YOU COMPUTER WILL PROBABLY DIE
   //Wow its great and it works but BY GOD IS IT SLOW welp we gotta implement alpha-beta pruning
-  std::pair<int, int> mM = miniMax(0, 0, true, 2, board);
-  std::cout << "Minimax Index: " << mM.second << std::endl;
-  std::cout << "Minimax Score: " << mM.first << std::endl;
+  //std::pair<int, int> mM = miniMax(0, 0, true, 2, board);
+  //std::cout << "Minimax Index: " << mM.second << std::endl;
+  //std::cout << "Minimax Score: " << mM.first << std::endl;
+
+  std::pair<int, chess::Move> newMM = newMiniMax(board, 3, true);
+  std::cout << "Best Score is: " << newMM.first << std::endl;
+  std::cout << "Best Move is: " << chess::uci::moveToUci(newMM.second) << std::endl;
+
+  // Check if the move is valid
+  if (newMM.second == chess::Move::NO_MOVE) {
+      return "";  // No valid move
+  }
+
+  return chess::uci::moveToUci(newMM.second);
 
   // get random move
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<> dist(0, moves.size() - 1);
+  //std::random_device rd;
+  //std::mt19937 gen(rd());
+  //std::uniform_int_distribution<> dist(0, moves.size() - 1);
   //auto move = moves[dist(gen)];
-  auto move = moves[mM.second];
-  return chess::uci::moveToUci(move);
+  //return chess::uci::moveToUci(move);
 }
