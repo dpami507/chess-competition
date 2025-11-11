@@ -172,7 +172,7 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax, int
     //If its whites turn
     if (getMax)
     {
-        int maxEval = -INFINITY; // the best move placeholder
+        int maxEval = -1000000; // the best move placeholder
 
         //chess::Move bestMove = moves[0];
 
@@ -201,7 +201,7 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax, int
     }
     else
     {
-        int minEval = INFINITY;
+        int minEval = 1000000;
 
         //chess::Move bestMove = moves[0];
 
