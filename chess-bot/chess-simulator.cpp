@@ -3,8 +3,11 @@
 // https://github.com/Disservin/chess-library
 #include "chess.hpp"
 #include <random>
+#include <algorithm>
 using namespace ChessSimulator;
 using namespace chess;
+
+int moveCount = 0;
 
 // https://www.chessprogramming.org/Simplified_Evaluation_Function
 // We did some borrowing from this handy dandy website
@@ -69,7 +72,7 @@ const int PSQT_king[] = {
     20, 30, 10, 0, 0, 10, 30, 20
 };
 
-int getBoardScore(Board board)
+int getBoardScore( Board& board)
 {
     int score = 0;
 
@@ -86,47 +89,47 @@ int getBoardScore(Board board)
         Color color = piece.color();
 
         //Index for the PSQT_tables 
-        int index = (color == Color::WHITE) ? sq : (63 - sq);
+        int index = (color == Color::WHITE) ? static_cast<int>(sq)
+            : 63 - static_cast<int>(sq);
         //int index = sq;
 
         int pieceScore = 0;
 
-        if (type == PieceType::underlying::KING)
+        if (type == PieceType::KING)
         {
             pieceScore += 20000;
             pieceScore += PSQT_king[index];
         }
-        else if (type == PieceType::underlying::QUEEN)
+        else if (type == PieceType::QUEEN)
         {
             pieceScore += 900;
             pieceScore += PSQT_queen[index];
         }
-        else if (type == PieceType::underlying::ROOK)
+        else if (type == PieceType::ROOK)
         {
             pieceScore += 500;
             pieceScore += PSQT_rook[index];
         }
-        else if (type == PieceType::underlying::BISHOP)
+        else if (type == PieceType::BISHOP)
         {
             pieceScore += 330;
             pieceScore += PSQT_bishop[index];
         }
-        else if (type == PieceType::underlying::KNIGHT)
+        else if (type == PieceType::KNIGHT)
         {
             pieceScore += 320;
             pieceScore += PSQT_knight[index];
         }
-        else if (type == PieceType::underlying::PAWN)
+        else if (type == PieceType::PAWN)
         {
             pieceScore += 100;
             pieceScore += PSQT_pawn[index];
         }
 
-        //std::cout << "Score is " << pieceScore << " for the piece " << piece << " at the location " << square << "\n";
-
-        //score += (color == Color::WHITE) ? pieceScore : -pieceScore;
-        score += pieceScore;
+        score += (color == Color::WHITE) ? pieceScore : -pieceScore; // I think this is the correct line since it takes into account both colors
+        //score += pieceScore;
     }
+
 
     return score;
 }
@@ -139,18 +142,20 @@ bool GameOver(const Board& board)
         return false;
         break;
     default:
+        moveCount = 0;
         return true;
         break;
     }
 }
 
-std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax)
+std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax, int alpha, int beta)
 {
+    moveCount++;
     //Base Case
     if (depth == 0 || GameOver(board))
     {
         int score = getBoardScore(board);
-        return { score, chess::Move() };
+        return { getMax ? score : -score, chess::Move::NO_MOVE};
     }
 
     //List of all legal move that can be made
@@ -162,22 +167,33 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax)
         return { getBoardScore(board), chess::Move::NO_MOVE };
     }
 
+    chess::Move bestMove = moves[0];
+
     //If its whites turn
     if (getMax)
     {
-        int maxEval = -99999999;
-        chess::Move bestMove = moves[0];
+        int maxEval = -INFINITY; // the best move placeholder
+
+        //chess::Move bestMove = moves[0];
 
         for (auto move : moves)
         {
             board.makeMove(move);
-            std::pair<int, chess::Move> eval = newMiniMax(board, depth - 1, false);
+            auto eval = newMiniMax(board, depth - 1, false, alpha, beta);
             board.unmakeMove(move);
+
 
             if (eval.first > maxEval)
             {
                 maxEval = eval.first;
                 bestMove = move;
+            }
+
+            // alpha beta pruning dlc
+            alpha = std::max(alpha, eval.first);
+            if (beta <= alpha) {
+                //std::cout << "WHITE Pruned at depth " << depth << "\n";
+                break;
             }
         }
 
@@ -185,13 +201,14 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax)
     }
     else
     {
-        int minEval = 99999999;
-        chess::Move bestMove = moves[0];
+        int minEval = INFINITY;
+
+        //chess::Move bestMove = moves[0];
 
         for (auto move : moves)
         {
             board.makeMove(move);
-            std::pair<int, chess::Move> eval = newMiniMax(board, depth - 1, true);
+            auto eval = newMiniMax(board, depth - 1, true, alpha, beta);
             board.unmakeMove(move);
 
             if (eval.first < minEval)
@@ -199,12 +216,20 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax)
                 minEval = eval.first;
                 bestMove = move;
             }
+
+            // alpha beta pruning dlc
+            beta = std::min(beta, eval.first);
+            if (beta <= alpha) {
+                //std::cout << "BLACK Pruned at depth " << depth << "\n";
+                break;
+            }
         }
 
         return { minEval, bestMove };
     }
 }
 
+// old function that isn't used at all
 std::pair<int, int> miniMax(int currentDepth, int index, bool getMax, int maxDepth, chess::Board board) {
 
     //List of all legal move that can be made
@@ -279,15 +304,17 @@ std::string ChessSimulator::Move(std::string fen) {
   //std::cout << "Minimax Index: " << mM.second << std::endl;
   //std::cout << "Minimax Score: " << mM.first << std::endl;
 
-  std::pair<int, chess::Move> newMM = newMiniMax(board, 3, true);
+  auto newMM = newMiniMax(board, 4, board.sideToMove() == chess::Color::WHITE, -1000000, 1000000);
   std::cout << "========================\n";
   std::cout << "Best Move is: " << chess::uci::moveToUci(newMM.second) << std::endl;
   std::cout << "Best Score is: " << newMM.first << std::endl;
+  std::cout << moveCount << std::endl;
 
   // Check if the move is valid
   if (newMM.second == chess::Move::NO_MOVE) {
       return "";  // No valid move
   }
+
 
   return chess::uci::moveToUci(newMM.second);
 
