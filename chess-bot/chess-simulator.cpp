@@ -74,7 +74,11 @@ const int PSQT_king[] = {
 
 int getBoardScore( Board& board)
 {
+    int materialScore = 0;
     int score = 0;
+    chess::Color sideToMove = board.sideToMove();
+
+    bool inCheck = board.inCheck();
 
     //Go through all the squares
     for (size_t sq = 0; sq < 64; sq++)
@@ -126,10 +130,14 @@ int getBoardScore( Board& board)
             pieceScore += PSQT_pawn[index];
         }
 
-        score += (color == Color::WHITE) ? pieceScore : -pieceScore; // I think this is the correct line since it takes into account both colors
+        //Subtract other opponets pieces while adding score 
+        if(sideToMove == Color::WHITE)
+            materialScore += (color == Color::WHITE) ? pieceScore : -pieceScore;
+        else
+            materialScore += (color == Color::WHITE) ? -pieceScore : pieceScore;
+
         //score += pieceScore;
     }
-
 
     return score;
 }
@@ -148,7 +156,7 @@ bool GameOver(const Board& board)
     }
 }
 
-std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax, int alpha, int beta)
+std::pair<int, chess::Move> alphaBetaPruning(Board& board, int depth, bool getMax, int alpha, int beta)
 {
     moveCount++;
     //Base Case
@@ -179,7 +187,7 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax, int
         for (auto move : moves)
         {
             board.makeMove(move);
-            auto eval = newMiniMax(board, depth - 1, false, alpha, beta);
+            auto eval = alphaBetaPruning(board, depth - 1, false, alpha, beta);
             board.unmakeMove(move);
 
 
@@ -208,7 +216,7 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax, int
         for (auto move : moves)
         {
             board.makeMove(move);
-            auto eval = newMiniMax(board, depth - 1, true, alpha, beta);
+            auto eval = alphaBetaPruning(board, depth - 1, true, alpha, beta);
             board.unmakeMove(move);
 
             if (eval.first < minEval)
@@ -229,57 +237,6 @@ std::pair<int, chess::Move> newMiniMax(Board& board, int depth, bool getMax, int
     }
 }
 
-// old function that isn't used at all
-std::pair<int, int> miniMax(int currentDepth, int index, bool getMax, int maxDepth, chess::Board board) {
-
-    //List of all legal move that can be made
-    Movelist moves;
-    movegen::legalmoves(moves, board);
-
-    int bestScore = (getMax) ? -100000 : 100000;
-    int bestIndex = 0;
-
-    //Base Case
-    if (currentDepth == maxDepth || moves.empty()) 
-    { 
-        //Get the score of where we are 
-        int score = getBoardScore(board); 
-        
-        // Return the pair of score and index 
-        return { score, index }; 
-    } 
-
-    //For every move 
-    for (chess::Move move : moves) 
-    { 
-        //Make the move on a new board
-        Board tempBoard = board;
-        tempBoard.makeMove(move); 
-
-        std::pair<int, int> mM = miniMax(currentDepth + 1, index * 2, !getMax, maxDepth, tempBoard);
-
-        if (getMax)
-        {
-            if (mM.first > bestScore)
-            {
-                bestScore = mM.first;
-                bestIndex = mM.second;
-            }
-        }
-        else 
-        {
-            if (mM.first < bestScore)
-            {
-                bestScore = mM.first;
-                bestIndex = mM.second;
-            }
-        }
-    } 
-
-    std::cout << "Using best score of " << bestScore << "\n";
-    return { bestScore, bestIndex };
-}
-
 std::string ChessSimulator::Move(std::string fen) {
   // create your board based on the board string following the FEN notation
   // search for the best move using minimax / monte carlo tree search /
@@ -298,17 +255,13 @@ std::string ChessSimulator::Move(std::string fen) {
   if(moves.size() == 0)
     return "";
 
-  //WARNING IF YOU SET DEPTH TO 4 OR GREATER YOU COMPUTER WILL PROBABLY DIE
-  //Wow its great and it works but BY GOD IS IT SLOW welp we gotta implement alpha-beta pruning
-  //std::pair<int, int> mM = miniMax(0, 0, true, 2, board);
-  //std::cout << "Minimax Index: " << mM.second << std::endl;
-  //std::cout << "Minimax Score: " << mM.first << std::endl;
+  auto newMM = alphaBetaPruning(board, 5, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
 
-  auto newMM = newMiniMax(board, 4, board.sideToMove() == chess::Color::WHITE, -1000000, 1000000);
-  std::cout << "========================\n";
+  std::string turnString = (board.sideToMove() == chess::Color::WHITE) ? " Whites Turn " : " Blacks Turn ";
+  std::cout << "===========" << turnString << "===========\n";
   std::cout << "Best Move is: " << chess::uci::moveToUci(newMM.second) << std::endl;
   std::cout << "Best Score is: " << newMM.first << std::endl;
-  std::cout << moveCount << std::endl;
+  std::cout << "Made: " << moveCount << " ghost moves\n";
 
   // Check if the move is valid
   if (newMM.second == chess::Move::NO_MOVE) {
