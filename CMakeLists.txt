@@ -125,7 +125,8 @@ endif() # NOT CHESS_VALIDATOR_ONLY
 
 # chess library
 file(GLOB_RECURSE CHESS_BOT_FILES CONFIGURE_DEPENDS "chess-bot/*.cpp" "chess-bot/*.h")
-add_library(chessbot STATIC ${CHESS_BOT_FILES})
+add_library(chessbot STATIC ${CHESS_BOT_FILES}
+        chess-bot/chess-simulator.cpp)
 set_target_properties(chessbot PROPERTIES LINKER_LANGUAGE CXX)
 include_directories(chess-bot)
 
@@ -137,7 +138,8 @@ target_link_libraries(chesscli PUBLIC chessbot)
 if(NOT CHESS_VALIDATOR_ONLY)
 # chess gui
 file(GLOB_RECURSE CHESS_GUI_FILES CONFIGURE_DEPENDS "chess-gui/*.cpp" "chess-gui/*.h")
-add_executable(chessgui ${CHESS_GUI_FILES})
+add_executable(chessgui ${CHESS_GUI_FILES}
+        chess-bot/chess-simulator.cpp)
 target_link_libraries(chessgui PUBLIC chessbot IMGUI SDL2::SDL2 SDL2_image)
 endif() # NOT CHESS_VALIDATOR_ONLY
 

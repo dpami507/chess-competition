@@ -99,36 +99,85 @@ int getBoardScore( Board& board)
 
         int pieceScore = 0;
 
+        const int KING_SCORE = 20000;
+        const int QUEEN_SCORE = 900;
+        const int ROOK_SCORE = 500;
+        const int BISHOP_SCORE = 330;
+        const int KNIGHT_SCORE = 320;
+        const int PAWN_SCORE = 100;
+
+
         if (type == PieceType::KING)
         {
-            pieceScore += 20000;
+            pieceScore += KING_SCORE;
             pieceScore += PSQT_king[index];
         }
         else if (type == PieceType::QUEEN)
         {
-            pieceScore += 900;
+            pieceScore += QUEEN_SCORE;
             pieceScore += PSQT_queen[index];
         }
         else if (type == PieceType::ROOK)
         {
-            pieceScore += 500;
+            pieceScore += ROOK_SCORE;
             pieceScore += PSQT_rook[index];
         }
         else if (type == PieceType::BISHOP)
         {
-            pieceScore += 330;
+            pieceScore += BISHOP_SCORE;
             pieceScore += PSQT_bishop[index];
         }
         else if (type == PieceType::KNIGHT)
         {
-            pieceScore += 320;
+            pieceScore += KNIGHT_SCORE;
             pieceScore += PSQT_knight[index];
         }
         else if (type == PieceType::PAWN)
         {
-            pieceScore += 100;
+            pieceScore += PAWN_SCORE;
             pieceScore += PSQT_pawn[index];
         }
+
+        /////////////////////////////////////////////////
+
+        //Checks if the space has enemy pieces attacking it or ally pieces defending it
+        Movelist moves;
+        movegen::legalmoves(moves, board, sideToMove);
+
+        //set attacker color
+        Color attackerColor;
+        if (color == Color::WHITE)
+            attackerColor = Color::BLACK;
+        else if (color == Color::BLACK)
+            attackerColor = Color::WHITE;
+
+        //check if a space is attacked
+        Bitboard attackers = attacks::attackers(board, attackerColor, square);
+        int numAttackers = attackers.count();
+
+        //check if a space is defended
+        Bitboard defenders = attacks::attackers(board, color, square);
+        int numDefenders = defenders.count();
+
+        int dangerScore = 0;
+
+        if (numAttackers >= numDefenders)
+        {
+            if (type == PieceType::KING)
+                dangerScore -= KING_SCORE;
+            else if (type == PieceType::QUEEN)
+                dangerScore -= QUEEN_SCORE;
+            else if (type == PieceType::ROOK)
+                dangerScore -= ROOK_SCORE;
+            else if (type == PieceType::BISHOP)
+                dangerScore -= BISHOP_SCORE;
+            else if (type == PieceType::KNIGHT)
+                dangerScore -= KNIGHT_SCORE;
+            else if (type == PieceType::PAWN)
+                dangerScore -= PAWN_SCORE;
+        }
+
+        ////////////////////////////////////////////////////////////////////////
 
         //Subtract other opponets pieces while adding score 
         if(sideToMove == Color::WHITE)
@@ -136,7 +185,8 @@ int getBoardScore( Board& board)
         else
             materialScore += (color == Color::WHITE) ? -pieceScore : pieceScore;
 
-        //score += pieceScore;
+        score += pieceScore;
+        score += dangerScore;
     }
 
     return score;
@@ -255,7 +305,7 @@ std::string ChessSimulator::Move(std::string fen) {
   if(moves.size() == 0)
     return "";
 
-  auto newMM = alphaBetaPruning(board, 5, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
+  auto newMM = alphaBetaPruning(board, 4, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
 
   std::string turnString = (board.sideToMove() == chess::Color::WHITE) ? " Whites Turn " : " Blacks Turn ";
   std::cout << "===========" << turnString << "===========\n";
