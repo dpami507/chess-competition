@@ -302,10 +302,10 @@ int getBoardScore(Board& board)
 
     /////////////////////////////////////////////////////////////////////////////////////
 
-    score += materialScore;
-    score += dangerScore * 2;
-    score += totalMovesWorth * 2;
-    score -= kingDanger;
+    score += materialScore * 2;
+    score += dangerScore;
+    score += totalMovesWorth * 3;
+    score -= kingDanger * 2;
 
     return score;
 }
