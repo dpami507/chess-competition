@@ -12,7 +12,7 @@ int moveCount = 0;
 // https://www.chessprogramming.org/Simplified_Evaluation_Function
 // We did some borrowing from this handy dandy website
 const int PSQT_pawn[] = {
-    0, 0, 0, 0, 0, 0, 0, 0,
+    100, 100, 100, 100, 100, 100, 100, 100,
     50, 50, 50, 50, 50, 50, 50, 50,
     10, 10, 20, 30, 30, 20, 10, 10,
     5, 5, 10, 25, 25, 10, 5, 5,
@@ -72,13 +72,55 @@ const int PSQT_king[] = {
     20, 30, 10, 0, 0, 10, 30, 20
 };
 
-int getBoardScore( Board& board)
+const int CORNERS[] = {
+    100, 90, 80, 70, 70, 80, 90, 100,
+    90, 90, 70, 60, 60, 70, 90, 90,
+    80, 70, 50, 40, 40, 50, 70, 80,
+    70, 60, 40, 0, 0, 40, 60, 70,
+    70, 60, 40, 0, 0, 40, 60, 70,
+    80, 70, 50, 40, 40, 50, 70, 80,
+    90, 90, 70, 60, 60, 70, 90, 90,
+    100, 90, 80, 70, 70, 80, 90, 100
+};
+
+const int MIDDLE[] = {
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 20, 20, 20, 20, 0, 0,
+    0, 0, 20, 20, 20, 20, 0, 0,
+    0, 0, 20, 20, 20, 20, 0, 0,
+    0, 0, 20, 20, 20, 20, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0, 0
+};
+
+//Piece Scores
+const int KING_SCORE = 20000;
+const int QUEEN_SCORE = 900;
+const int ROOK_SCORE = 500;
+const int BISHOP_SCORE = 330;
+const int KNIGHT_SCORE = 320;
+const int PAWN_SCORE = 100;
+
+int getBoardScore(Board& board)
 {
     int materialScore = 0;
     int score = 0;
+    int dangerScore = 0;
+    int defendedBonus = 1;
+
     chess::Color sideToMove = board.sideToMove();
 
+    Color enemyColor;
+    if (sideToMove == Color::WHITE)
+        enemyColor = Color::BLACK;
+    else if (sideToMove == Color::BLACK)
+        enemyColor = Color::WHITE;
+
     bool inCheck = board.inCheck();
+
+    Movelist moves;
+    movegen::legalmoves(moves, board, sideToMove);
 
     //Go through all the squares
     for (size_t sq = 0; sq < 64; sq++)
@@ -93,21 +135,17 @@ int getBoardScore( Board& board)
         Color color = piece.color();
 
         //Index for the PSQT_tables 
-        int index = (color == Color::WHITE) ? static_cast<int>(sq)
-            : 63 - static_cast<int>(sq);
-        //int index = sq;
+        int index;
+        if (color == Color::WHITE) index = static_cast<int>(sq);
+        else {
+            int rank = sq / 8;
+            int file = sq % 8;
+            index = (7 - rank) * 8 + file;
+        }
 
         int pieceScore = 0;
 
-        const int KING_SCORE = 20000;
-        const int QUEEN_SCORE = 900;
-        const int ROOK_SCORE = 500;
-        const int BISHOP_SCORE = 330;
-        const int KNIGHT_SCORE = 320;
-        const int PAWN_SCORE = 100;
-
-
-        if (type == PieceType::KING)
+        if (type == PieceType::KING && board.us(sideToMove).count() > 8)
         {
             pieceScore += KING_SCORE;
             pieceScore += PSQT_king[index];
@@ -138,56 +176,136 @@ int getBoardScore( Board& board)
             pieceScore += PSQT_pawn[index];
         }
 
-        /////////////////////////////////////////////////
+        pieceScore += MIDDLE[index];
+        
+        /////////////////////////////////////////////////////////////////////////////////////////
 
-        //Checks if the space has enemy pieces attacking it or ally pieces defending it
-        Movelist moves;
-        movegen::legalmoves(moves, board, sideToMove);
-
-        //set attacker color
-        Color attackerColor;
-        if (color == Color::WHITE)
-            attackerColor = Color::BLACK;
-        else if (color == Color::BLACK)
-            attackerColor = Color::WHITE;
+        //Checks if the space has enemy pieces attacking it or ally pieces defending it and takes that into account
 
         //check if a space is attacked
-        Bitboard attackers = attacks::attackers(board, attackerColor, square);
+        Bitboard attackers = attacks::attackers(board, enemyColor, square);
         int numAttackers = attackers.count();
 
         //check if a space is defended
-        Bitboard defenders = attacks::attackers(board, color, square);
+        Bitboard defenders = attacks::attackers(board, sideToMove, square);
         int numDefenders = defenders.count();
 
-        int dangerScore = 0;
-
         if (numAttackers >= numDefenders)
-        {
-            if (type == PieceType::KING)
-                dangerScore -= KING_SCORE;
-            else if (type == PieceType::QUEEN)
-                dangerScore -= QUEEN_SCORE;
-            else if (type == PieceType::ROOK)
-                dangerScore -= ROOK_SCORE;
-            else if (type == PieceType::BISHOP)
-                dangerScore -= BISHOP_SCORE;
-            else if (type == PieceType::KNIGHT)
-                dangerScore -= KNIGHT_SCORE;
-            else if (type == PieceType::PAWN)
-                dangerScore -= PAWN_SCORE;
-        }
+            dangerScore += -10;
+        else if (numDefenders >= numAttackers)
+            dangerScore += 5;
 
-        ////////////////////////////////////////////////////////////////////////
+        /////////////////////////////////////////////////////////////////////////////
 
         //Subtract other opponets pieces while adding score 
         if(sideToMove == Color::WHITE)
             materialScore += (color == Color::WHITE) ? pieceScore : -pieceScore;
         else
             materialScore += (color == Color::WHITE) ? -pieceScore : pieceScore;
-
-        score += pieceScore;
-        score += dangerScore;
     }
+
+    ////////////////////////////////////////////////////////////////////////
+
+    //Mobility
+
+    int numLegalMoves = moves.size();
+    int totalMovesWorth = 0;
+
+    //Adds for each legal move to a safe square and adds less for each legal move to an attacked square
+    for (auto move : moves)
+    {
+        //Prefers safe moves in mobility calculations
+        int moveWorth = 2;
+        if (attacks::attackers(board, enemyColor, move.to()).count() > 0)
+            moveWorth -= 1;
+
+        totalMovesWorth += moveWorth;
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    //Puts more pressure on the opponent's king near the endgame, moving it to a corner or wall
+
+    int numOpponentPieces = 0;
+    size_t opponentKingSquare = -1;
+
+    for (size_t sq = 0; sq < 64; sq++)
+    {
+        //Get the square and piece on that square
+        Square square = static_cast<Square>(sq);
+        Piece piece = board.at(square);
+
+        //Get piece characteristics
+        if (piece == Piece::NONE) continue;
+
+        if (piece.color() == enemyColor)
+        {
+            numOpponentPieces++;
+            if (piece.type() == PieceType::KING)
+                opponentKingSquare = sq;
+        }
+    }
+
+    if (numOpponentPieces <= 4 && opponentKingSquare != 0)
+    {
+        int opponentKingIndex = (enemyColor == Color::WHITE) ? static_cast<int>(opponentKingSquare)
+            : 63 - static_cast<int>(opponentKingSquare);
+        score += CORNERS[opponentKingIndex];
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+    //King Safety, checks how many enemies are attacking the kings defined area
+    //Numbers and formula from https://www.chessprogramming.org/King_Safety
+
+    Square kingSquare = board.kingSq(sideToMove);
+    Bitboard kingArea = attacks::king(kingSquare);
+    int kingDanger = 0;
+    int kingAttackerCount = 0;
+    int valueOfAttacks = 0;
+    const int kingAttackWeight[] = {0,0,50,75,88,94,97,99};
+
+    Bitboard tempKingArea = kingArea;
+    while (tempKingArea)
+    {
+        Square square = Square(tempKingArea.lsb());
+        tempKingArea.pop();
+        Bitboard attackers = attacks::attackers(board, enemyColor, square);
+
+        kingAttackerCount += attackers.count();
+
+        while (attackers)
+        {
+            Square attackerSquare = attackers.lsb();
+            attackers.pop();
+            Piece piece = board.at(attackerSquare);
+
+            PieceType type = piece.type();
+            Color color = piece.color();
+
+            if (color == enemyColor)
+            {
+                if (type == PieceType::QUEEN)
+                    valueOfAttacks += 80;
+                else if (type == PieceType::ROOK)
+                    valueOfAttacks += 40;
+                else if (type == PieceType::BISHOP || type == PieceType::KNIGHT)
+                    valueOfAttacks += 20;
+            }
+        }
+    }
+
+    if (kingAttackerCount > 7)
+        kingAttackerCount = 7;
+
+    kingDanger = (valueOfAttacks * kingAttackWeight[kingAttackerCount]) / 100;
+
+    /////////////////////////////////////////////////////////////////////////////////////
+
+    score += materialScore;
+    score += dangerScore * 2;
+    score += totalMovesWorth * 2;
+    score -= kingDanger;
 
     return score;
 }
@@ -305,7 +423,7 @@ std::string ChessSimulator::Move(std::string fen) {
   if(moves.size() == 0)
     return "";
 
-  auto newMM = alphaBetaPruning(board, 4, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
+  auto newMM = alphaBetaPruning(board, 3, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
 
   std::string turnString = (board.sideToMove() == chess::Color::WHITE) ? " Whites Turn " : " Blacks Turn ";
   std::cout << "===========" << turnString << "===========\n";
