@@ -1,44 +1,43 @@
-# Chess-Competition
+# Mini-Max
+Minimax is a recursive algorithm that is used for game-playing AI and decision making. It goes through every possible choice (to a certain depth) and from that it alternates between getting the maximum score and the minimum score (this is because of turns). 
 
-This is a C++ chess competition base repository. Here we are going to host only the chess engine part of the competition. The competition will be held on a web platform, and the source code will be available on a different repository.
+One drawback to the algorithm is that it can be very expensive to run, for example chess in the middle-game of chess there can be an average of 30-40 moves and minimax checks every single one, as well as going deeper into it so if you have a depth of 4 (which is what we used) that could be 40^4 or 2,560,000 moves to check and compute the score for.
 
-## Main activity
+Minimax is commonly used for two player games, like chess, checkers, and tic-tac-toe, where a score can be given to the board at a given time (Heuristics).
 
-You have to code a chess engine from the ground up. You will receive a string as input following [FEN](https://www.chess.com/terms/fen-chess) notation and the output should be the move as [UCI](https://en.wikipedia.org/wiki/Universal_Chess_Interface). 
+# Alpha Beta
+Alpha Beta Pruning is a technique used in our minimax to remove any possible moves that will never be taken.
+- Alpha starts as -Inf to always get the highest, opposite for Beta.
+- Alpha is continuously updated to be the absolute maximum a node can be, while the Beta represents the minimum on the subtree (given the root node is searching for the Max).
+- If Beta is ever Less than or Equal to Alpha, we can ignore the remaining nodes in the subtree, since they will never be picked.
+- Recursively call and prune until the Minimax is selected.
 
-## Rules
+This works great for chess, since the numerical values representing the board state after a move lets us calculate the the best moves and prune the worst.
 
-- Implement your chess engine only inside the chess-bot folder in C++;
-- Create .h and .cpp files inside chess-bot;
-- Obey the interface specified on chess-bot;
-- You might want to test your code via terminal via chess-cli, or chess-gui;
-- Merge requests are welcome;
-- When you submit your code, you should zip only the contents of the chess-bot folder and send it to the system;
-- Do not use sub-folders inside the chess-bot folder, it will break my automation;
+# Heuristics
+## Mobility
+- Goes through each possible move for the player
+- Decides whether a move has an enemy attacking that square
+- Adds 2 points for each safe move and -1 points for each dangerous move
+- Gives extra score to moves that give the player more movable squares, increasing their options
 
-## Folder structure
+## Square Danger
+- Checks the number of enemy pieces attacking the square
+- Checks the number of ally pieces defending the square
+- Gives 5 points for a move that is defended well
+- Gives -10 points for a space that has more attackers than defenders
 
-- chess-bot: Here you will implement your chess engine;
-- chess-validator: Here you will find the chess-validator code;
-- chess-gui: Here you will find the chess-gui code;
+## King Pressure
+- Finds the position of the opponent’s king
+- If the opponent has 4 or less pieces, give extra points for moving the enemy king to the edges and corners of the board to make checkmate easier
 
-## How the competition will work
+## King Safety
+- Defines the king’s area as the king’s square and adjacent squares
+- Goes through the pieces attacking the king’s area and adds a score depending on the type of piece attacking the area
+- Multiplies the sum of the points by a defined number depending on the number of pieces attacking the king’s area
+- Subtracts points based on how much danger the king is in
 
-- A tournament will run every day;
-- The tournament consists of making all players playing against each other on both sides of the board;
-- You may use up to 16GB ram and 12 cores of CPU;
-- Each turn should take less than 10 seconds;
-- You are not allowed to use any external library besides the ones already provided here;
-- You can use AI assisted tools, but you have to state it on your code, and you will receive a penalty on your final score of 20%;
-- You may work in teams of up to 2 people;
-- Your username should not match your real name by any means in order do follow FERPA compliance;
-
-## Web and API
-
-The online version will be hosted on https://web.gameguild.gg
-
-The source code will be coded here https://github.com/InfiniBrains/website
-
+# Project Stuff
 ## Third Parties
 
 - [Disservin/chess-library](https://github.com/Disservin/chess-library)
