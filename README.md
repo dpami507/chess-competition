@@ -39,14 +39,10 @@ This works great for chess, since the numerical values representing the board st
 
 # Project Stuff
 ## Images
-Black Wins: 
-![Black Wins](chess-gui/Checkmate_BlackWins.png)
 
-White Wins: 
-![White Wins](chess-gui/Checkmate_WhiteWins.png)
-
-Stalemate:
-<img src="chess-gui/Stalemate.png" width="100" height="100"/>
+|Black Wins|<img src="chess-gui/Checkmate_BlackWins.png" width="100" height="100"/>|
+|White Wins|<img src="chess-gui/Checkmate_WhiteWins.png" width="100" height="100"/>|
+|Stalemate|<img src="chess-gui/Stalemate.png" width="100" height="100"/>|
 
 ## Third Parties
 
