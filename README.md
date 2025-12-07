@@ -39,11 +39,9 @@ This works great for chess, since the numerical values representing the board st
 
 # Project Stuff
 ## Images
-|Description|Image|
-|-----------|-----|
-|Black Wins|<img src="chess-gui/Checkmate_BlackWins.png" width="200" height="200"/>|
-|White Wins|<img src="chess-gui/Checkmate_WhiteWins.png" width="200" height="200"/>|
-|Stalemate |<img src="chess-gui/Stalemate.png" width="200" height="200"/>		   |
+|Black Wins|White Wins|Stalemate|
+|-|-|-|
+|<img src="chess-gui/Checkmate_BlackWins.png" width="150" height="150"/>|<img src="chess-gui/Checkmate_WhiteWins.png" width="150" height="150"/>|<img src="chess-gui/Stalemate.png" width="150" height="150"/>		   |
 
 ## Third Parties
 
