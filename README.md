@@ -38,6 +38,11 @@ This works great for chess, since the numerical values representing the board st
 - Subtracts points based on how much danger the king is in
 
 # Project Stuff
+## Images
+![Black Wins](chess-gui/Checkmate_BlackWins.png)
+![White Wins](chess-gui/Checkmate_WhiteWins.png)
+![Stalemate](chess-gui/Stalemate.png)
+
 ## Third Parties
 
 - [Disservin/chess-library](https://github.com/Disservin/chess-library)
