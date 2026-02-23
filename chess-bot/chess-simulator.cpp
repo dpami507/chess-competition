@@ -413,32 +413,19 @@ std::string ChessSimulator::Move(std::string fen) {
   if(moves.size() == 0)
     return "";
 
-  if (board.sideToMove() == chess::Color::WHITE)
-  {
-      auto newMM = alphaBetaPruning(board, 4, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
+    auto newMM = alphaBetaPruning(board, 4, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
 
-      std::string turnString = (board.sideToMove() == chess::Color::WHITE) ? " Whites Turn " : " Blacks Turn ";
-      std::cout << "===========" << turnString << "===========\n";
-      std::cout << "Best Move is: " << chess::uci::moveToUci(newMM.second) << std::endl;
-      std::cout << "Best Score is: " << newMM.first << std::endl;
-      std::cout << "Made: " << moveCount << " ghost moves\n";
+    std::string turnString = (board.sideToMove() == chess::Color::WHITE) ? " Whites Turn " : " Blacks Turn ";
+    std::cout << "===========" << turnString << "===========\n";
+    std::cout << "Best Move is: " << chess::uci::moveToUci(newMM.second) << std::endl;
+    std::cout << "Best Score is: " << newMM.first << std::endl;
+    std::cout << "Made: " << moveCount << " ghost moves\n";
 
-      // Check if the move is valid
-      if (newMM.second == chess::Move::NO_MOVE) {
-          return "";  // No valid move
-      }
+    // Check if the move is valid
+    if (newMM.second == chess::Move::NO_MOVE) {
+        return "";  // No valid move
+    }
 
 
-      return chess::uci::moveToUci(newMM.second);
-  }
-  else
-  {
-    //get random move
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(0, moves.size() - 1);
-    auto move = moves[dist(gen)];
-    
-    return chess::uci::moveToUci(move);
-  }
+    return chess::uci::moveToUci(newMM.second);
 }
