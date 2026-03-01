@@ -413,7 +413,7 @@ std::string ChessSimulator::Move(std::string fen) {
   if(moves.size() == 0)
     return "";
 
-    auto newMM = alphaBetaPruning(board, 4, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
+    auto newMM = alphaBetaPruning(board, 5, board.sideToMove() == chess::Color::WHITE, -2147483647, 2147483647);
 
     std::string turnString = (board.sideToMove() == chess::Color::WHITE) ? " Whites Turn " : " Blacks Turn ";
     std::cout << "===========" << turnString << "===========\n";
